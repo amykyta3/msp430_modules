@@ -1,0 +1,48 @@
+The USB API was modified from its original form to be compatible with the current directory
+structure and to silence warnings that TI should have taken care of.
+Below is a list of modifications made:
+
+----------------------------------------------------------------------------------------------------
+Update #include statement paths
+----------------------------------------------------------------------------------------------------
+Most files were updated:
+    from:
+        #include <descriptors.h>
+    to:
+        #include <USB_Config/descriptors.h>
+
+----------------------------------------------------------------------------------------------------
+Clean up some macros
+----------------------------------------------------------------------------------------------------
+in USB_Common/usb.c and USB_Common/usb.h
+    from:
+        #if defined(__TI_COMPILER_VERSION__) || defined(__GNUC__)
+        #define __no_init
+        #define __data16
+        #endif
+    to:
+        #if defined(__TI_COMPILER_VERSION__)
+        #define __no_init
+        #define __data16
+        #elif defined(__GNUC__)
+        #ifndef __no_init
+        #define __no_init    __attribute__ ((section (".noinit")))
+        #endif
+        #define __data16
+        #endif
+
+----------------------------------------------------------------------------------------------------
+USB_Common/usb.c
+----------------------------------------------------------------------------------------------------
+Unused variable "i" on line 1156. removed to silence warning.
+
+----------------------------------------------------------------------------------------------------
+USB_Common/usbdma.c
+----------------------------------------------------------------------------------------------------
+Lines 93-94:
+    from:
+        DMA_setSrcAddress(USB_DMA_CHAN, (uint32_t)source, DMA_DIRECTION_INCREMENT);
+        DMA_setDstAddress(USB_DMA_CHAN, (uint32_t)dest, DMA_DIRECTION_INCREMENT);
+    to:
+        DMA_setSrcAddress(USB_DMA_CHAN, (uintptr_t)source, DMA_DIRECTION_INCREMENT);
+        DMA_setDstAddress(USB_DMA_CHAN, (uintptr_t)dest, DMA_DIRECTION_INCREMENT);
