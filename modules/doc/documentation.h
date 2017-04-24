@@ -108,22 +108,9 @@
 /**
     \page PG_DOWNLOAD Download
 
-    The latest ZIP of the code library can be downloaded from the Sourceforge page:
+    Libraries can be found at GitHub:
     
-    &nbsp;&nbsp;&nbsp;<a href="http://sourceforge.net/projects/msp430modules/">Sourceforge: MSP430 Modules</a>
-
-***************************************************************************************************/
-
-/**
-    \page PG_CONTACT Contact
-
-    If you have some comments, suggestions, or just want to share a project where this library has 
-    been used, feel free to contact me at:
-
-    amykyta3@users.sourceforge.net
-    
-    Or through the project's
-    <a href="http://sourceforge.net/projects/msp430modules/"><b>Sourceforge page</b></a>
+    &nbsp;&nbsp;&nbsp;<a href="https://github.com/amykyta3/msp430_modules">GitHub: amykyta3/msp430_modules</a>
 
 ***************************************************************************************************/
 

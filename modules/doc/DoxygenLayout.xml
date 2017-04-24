@@ -5,7 +5,6 @@
 	<tab type="mainpage" visible="yes" title="Overview"/>
 	<tab type="user" url="@ref PG_MODULE_DOC" title="Module Documentation"/>
 	<tab type="user" url="@ref PG_DOWNLOAD" title="Download"/>
-	<tab type="user" url="@ref PG_CONTACT" title="Contact"/>
 	<tab type="examples" visible="yes" title="" intro=""/> 
 	<tab type="files" visible="yes" title="Index">
 		<tab type="files" visible="yes" title="File Index" intro=""/>
