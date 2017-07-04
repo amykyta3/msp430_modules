@@ -74,6 +74,12 @@
 *       2 = SMCLK
 **/
 
+// this wrap for system "sleep until IRQ" uses by write routine. it allows implements LPM modes
+//		when write waits for tx FIFO appears free space
+#define UIO_SLEEP_IRQ()
+//* this wrap provide system signaling from ISR, intends to exit from LPM
+//#define UIO_AWAKE_IRQ()
+
 
 // Modulation register settings for MSP430 are annoying to automatically determine at compile time.
 // Instead, fill them out here.

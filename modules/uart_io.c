@@ -77,6 +77,10 @@
     #error DMA TX mode not supported yet.
 #endif
 
+#ifndef UIO_SLEEP_IRQ
+#define UIO_SLEEP_IRQ()
+#endif
+
 //==================================================================================================
 // Init/Uninit
 //==================================================================================================
@@ -156,6 +160,20 @@ void uart_uninit(void){
 //==================================================================================================
 // RX Functions
 //==================================================================================================
+#ifdef UIO_AWAKE_IRQ
+#define UIO_RX_SANITY_WAKE  1
+volatile size_t uio_rx_await_chars = 0;
+static inline
+void UIO_AWAIT_CHARS(size_t num){
+    uio_rx_await_chars = num;
+    UIO_SLEEP_IRQ();
+}
+#else
+inline
+#define UIO_RX_SANITY_WAKE  0
+void UIO_AWAIT_CHARS(size_t num){};
+#endif
+
 void uart_read(void *buf, size_t size){
     #if (UIO_RX_MODE == 1) // Interrupt Mode
         size_t rdcount;
@@ -201,6 +219,10 @@ void uart_read(void *buf, size_t size){
                 if(rdcount > size){
                     rdcount = size;
                 }
+                else if (rdcount == 0){
+                    UIO_AWAIT_CHARS(size);
+                    continue;
+                }
                 
                 // copy rdcount into u8buf
                 memcpy(u8buf, &rxbuf[rx_rdidx], rdcount);
@@ -216,6 +238,10 @@ void uart_read(void *buf, size_t size){
                 rdcount = sizeof(rxbuf) - rx_rdidx;
                 if(rdcount > size){
                     rdcount = size;
+                }
+                else if (rdcount == 0){
+                    UIO_SLEEP_IRQ();
+                    continue;
                 }
                 
                 // copy rdcount into u8buf
@@ -364,8 +390,11 @@ char *uart_gets_s(char *str, size_t n){
 //==================================================================================================
 // TX Functions
 //==================================================================================================
+inline
+void uart_tx_resume(void);
+
 void uart_write(const void *buf, size_t size){
-    #if (UIO_TX_MODE == 1) // Interrupt Mode
+    #if (UIO_TX_MODE >= 1) // Interrupt Mode
         size_t wrcount;
         const uint8_t* u8buf = (const uint8_t*)buf;
         
@@ -383,6 +412,8 @@ void uart_write(const void *buf, size_t size){
                 // Since TX is inactive and should be empty, the interrupt should occur immediately.
                 UIO_IE |= UIO_TXIE;
             }
+            else
+                UIO_SLEEP_IRQ();
         }
     #else // Polling Mode
         uint8_t* u8buf = (uint8_t*)buf;
@@ -393,6 +424,15 @@ void uart_write(const void *buf, size_t size){
             size--;
         }
     #endif
+}
+
+inline
+void uart_tx_resume(void){
+#if (UIO_TX_MODE <= 1) // Interrupt Mode
+    UIO_IE |= UIO_TXIE;
+#elif (UIO_TX_MODE == 2) // DMA Mode
+
+#endif
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -474,20 +514,30 @@ bool  uart_tx_busy(void){
                     UIO_TXBUF = chr;
             }else{
                 UIO_IE &= ~UIO_TXIE; // disable tx interrupt
+                UIO_AWAKE_IRQ();
             }
         }
     #endif
 #elif defined(__MSP430_HAS_5xx_USCI__)  || defined(__MSP430_HAS_6xx_EUSCI__)  // - - - - - - - - - -
-    #if (UIO_RX_MODE == 1) || (UIO_TX_MODE == 1)
+    #if (UIO_RX_MODE == 1) || (UIO_RX_SANITY_WAKE > 0) || (UIO_TX_MODE == 1)
         // RX/TX Interrupt Service Routine
         ISR(UIO_ISR){
             char chr;
-            
-            #if (UIO_RX_MODE == 1)
+            char awake = 0;
+
+            #if (UIO_RX_MODE == 1) || (UIO_RX_SANITY_WAKE > 0)
             if(UIO_IFG & UIO_RXIFG){
                 // Data Recieved
+                #if (UIO_RX_MODE == 1)
                 chr = UIO_RXBUF;
                 fifo_write(&rx_fifo, &chr, 1);
+                #endif
+                #if (UIO_RX_SANITY_WAKE > 0)
+                if (uio_rx_await_chars > 0)
+                    uio_rx_await_chars--;
+                if (uio_rx_await_chars == 0)
+                    awake = 1;
+                #endif
             }
             #endif
             
@@ -498,8 +548,14 @@ bool  uart_tx_busy(void){
                     UIO_TXBUF = chr;
                 }else{
                     UIO_IE &= ~UIO_TXIE; // disable tx interrupt
+                    awake = 1;
                 }
             }
+            #endif
+
+            #if defined(UIO_AWAKE_IRQ)
+            if (awake)
+                UIO_AWAKE_IRQ();
             #endif
         }
     #endif
