@@ -411,6 +411,12 @@
 #define RX_DMA_DA       TPASTE3(DMA, UIO_RX_DMA_CHANNEL, DA)
 #define RX_DMA_SZ       TPASTE3(DMA, UIO_RX_DMA_CHANNEL, SZ)
 
+#if defined (__TI_COMPILER_VERSION__)
+typedef __SFR_FARPTR uio_dma_addr;
+#else
+typedef uintptr_t    uio_dma_addr;
+#endif
+
 // Determine Trigger control register and corresponding mask.
 #if defined(__MSP430_HAS_DMA_1__)
     #define RX_DMA_TRG          DMACTL0

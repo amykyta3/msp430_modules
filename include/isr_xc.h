@@ -75,7 +75,7 @@
 //==================================================================================================
 #if defined(__GNUC__)  &&  defined(__MSP430__)
     /* This is the MSPGCC compiler */
-#define _ISR(a,b)    void __attribute__((interrupt (a))) b(void)        // Edit by Alex Mykyta
+#define _ISR(a,b)    void __attribute__((interrupt (a##_VECTOR))) b(void)        // Edit by Alex Mykyta
 
 
 //==================================================================================================
@@ -101,7 +101,7 @@ __interrupt void b(void)
 //==================================================================================================
 #elif defined(__CROSSWORKS_MSP430)
     /* This is the Rowley Crossworks compiler */
-#define _ISR(a,b) void b(void) __interrupt[a] // Edit by Alex Mykyta
+#define _ISR(a,b) void b(void) __interrupt[a##_VECTOR] // Edit by Alex Mykyta
 
 
 //==================================================================================================
@@ -109,7 +109,7 @@ __interrupt void b(void)
 //==================================================================================================
 #elif defined(__TI_COMPILER_VERSION__)
     /* This is the Code Composer Studio compiler. */
-#define _ISR(a,b) EMIT_PRAGMA(vector=##a)\
+#define _ISR(a,b) EMIT_PRAGMA(vector=a##_VECTOR)\
         __interrupt void b (void)
 
         

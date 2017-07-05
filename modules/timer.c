@@ -140,7 +140,7 @@ static uint32_t RefreshTimers(uint16_t current_tr){
 }
 
 //--------------------------------------------------------------------------------------------------
-ISR(TMR_TIMER_ISR_VECTOR){
+ISR(TMR_TIMER_ISR){
     uint32_t ticks_min;
     
     while(1){

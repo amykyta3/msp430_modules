@@ -43,8 +43,9 @@
     
 //--------------------------------------------------------------------------------------------------
 #elif defined(__TI_COMPILER_VERSION__)
-    
-    #define __get_interrupt_state       _get_interrupt_state
+    #ifndef __get_interrupt_state
+        #define __get_interrupt_state() _get_interrupt_state()
+    #endif
     #define __set_interrupt_state(x)    _set_interrupt_state(x)
 
 

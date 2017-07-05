@@ -19,6 +19,12 @@ extern "C" {
 #include <isr_xc.h>
 #include <intrinsics_xc.h>
 
+#if defined(__GNUC__)
+#define __memory_barrier()  __asm__ volatile ("" ::: "memory")
+#else
+#define __memory_barrier()
+#endif
+
 #ifdef __cplusplus
 }
 #endif

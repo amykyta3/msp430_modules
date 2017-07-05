@@ -92,7 +92,7 @@ static void buttonHoldEventProcess(void){
 ///\cond INTERNAL
 //--------------------------------------------------------------------------------------------------
 #if BUTTON_PORT1 == 1
-ISR(PORT1_VECTOR){
+ISR(PORT1){
     uint8_t pifg;
     uint16_t tr_tmp;
     pifg = P1IFG;
@@ -118,7 +118,7 @@ ISR(PORT1_VECTOR){
 #endif
 
 #if BUTTON_PORT2 == 1
-ISR(PORT2_VECTOR){
+ISR(PORT2){
     uint8_t pifg;
     uint16_t tr_tmp;
     pifg = P2IFG;
@@ -145,7 +145,7 @@ ISR(PORT2_VECTOR){
 
 //--------------------------------------------------------------------------------------------------
 
-ISR(BUT_TIMER_ISR_VECTOR){
+ISR(BUT_TIMER_ISR){
     struct{
         uint8_t port;
         uint8_t flags;

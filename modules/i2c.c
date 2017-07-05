@@ -71,7 +71,7 @@ static struct{
 } transfer;
 
 //--------------------------------------------------------------------------------------------------
-ISR(I2C_ISR_VECTOR){
+ISR(I2C_ISR){
     if(I2C_IV == USCI_I2C_UCNACKIFG){
         I2C_IFG = 0;
         I2C_IE = 0;

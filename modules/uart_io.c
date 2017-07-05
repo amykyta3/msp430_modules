@@ -63,7 +63,7 @@
 
 #if(UIO_RX_MODE == 1) // Interrupt Mode
     static char rxbuf[UIO_RXBUF_SIZE];
-    static FIFO_t RXFIFO;
+    static FIFO_t rx_fifo;
 #elif(UIO_RX_MODE == 2) // DMA Mode
     static char rxbuf[UIO_RXBUF_SIZE];
     static volatile int8_t rx_laplead;
@@ -72,7 +72,7 @@
 
 #if(UIO_TX_MODE == 1) // Interrupt Mode
     static char txbuf[UIO_TXBUF_SIZE];
-    static FIFO_t TXFIFO;
+    static FIFO_t tx_fifo;
 #elif(UIO_TX_MODE == 2) // DMA Mode
     #error DMA TX mode not supported yet.
 #endif
@@ -92,12 +92,12 @@ void uart_init(void){
         UIO_CTL  &= ~SWRST;
         
         #if(UIO_RX_MODE == 1) // Interrupt Mode
-            fifo_init(&RXFIFO, rxbuf, UIO_RXBUF_SIZE);
+            fifo_init(&rx_fifo, rxbuf, UIO_RXBUF_SIZE);
             UIO_IE |= UIO_RXIE;
         #endif
         
         #if(UIO_TX_MODE == 1) // Interrupt Mode
-            fifo_init(&TXFIFO, txbuf, UIO_TXBUF_SIZE);
+            fifo_init(&tx_fifo, txbuf, UIO_TXBUF_SIZE);
         #endif
         
     #elif defined(__MSP430_HAS_2xx_USCI__) || defined(__MSP430_HAS_5xx_USCI__) || defined(__MSP430_HAS_6xx_EUSCI__)
@@ -110,12 +110,12 @@ void uart_init(void){
         UIO_CTL1 &= ~UCSWRST;
         
         #if(UIO_RX_MODE == 1) // Interrupt Mode
-            fifo_init(&RXFIFO, rxbuf, UIO_RXBUF_SIZE);
+            fifo_init(&rx_fifo, rxbuf, UIO_RXBUF_SIZE);
             UIO_IE |= UIO_RXIE;
         #endif
         
         #if(UIO_TX_MODE == 1) // Interrupt Mode
-            fifo_init(&TXFIFO, txbuf, UIO_TXBUF_SIZE);
+            fifo_init(&tx_fifo, txbuf, UIO_TXBUF_SIZE);
         #endif   
     #endif
     
@@ -123,8 +123,8 @@ void uart_init(void){
         RX_DMA_CTL = 0;
         RX_DMA_TRG &= ~RX_DMA_TSEL_MASK;
         RX_DMA_TRG |= RX_DMA_TSEL;
-        RX_DMA_SA = (uintptr_t)&UIO_RXBUF;
-        RX_DMA_DA = (uintptr_t)rxbuf;
+        RX_DMA_SA = (uio_dma_addr)&UIO_RXBUF;
+        RX_DMA_DA = (uio_dma_addr)rxbuf;
         RX_DMA_SZ = sizeof(rxbuf);
         rx_laplead = 0;
         rx_rdidx = 0;
@@ -163,17 +163,17 @@ void uart_read(void *buf, size_t size){
         
         while(size > 0){
             // Get number of bytes that can be read.
-            rdcount = fifo_rdcount(&RXFIFO);
+            rdcount = fifo_rdcount(&rx_fifo);
             if(rdcount > size){
                 rdcount = size;
             }
             
             if(rdcount != 0){
                 if(u8buf){
-                    fifo_read(&RXFIFO, u8buf, rdcount);
+                    fifo_read(&rx_fifo, u8buf, rdcount);
                     u8buf += rdcount;
                 }else{
-                    fifo_read(&RXFIFO, NULL, rdcount);
+                    fifo_read(&rx_fifo, NULL, rdcount);
                 }
                 size -= rdcount;
             }
@@ -264,7 +264,7 @@ void uart_read(void *buf, size_t size){
 //--------------------------------------------------------------------------------------------------
 size_t uart_rdcount(void){
     #if (UIO_RX_MODE == 1) // Interrupt Mode
-        return(fifo_rdcount(&RXFIFO));
+        return(fifo_rdcount(&rx_fifo));
     #elif (UIO_RX_MODE == 2) // DMA Mode
         int8_t laplead;
         uint16_t wridx;
@@ -306,7 +306,7 @@ size_t uart_rdcount(void){
 //--------------------------------------------------------------------------------------------------
 void uart_rdflush(void){
     #if (UIO_RX_MODE == 1) // Interrupt Mode
-        fifo_clear(&RXFIFO);
+        fifo_clear(&rx_fifo);
     #elif (UIO_RX_MODE == 2) // DMA Mode
         uint16_t wridx;
         
@@ -371,13 +371,13 @@ void uart_write(void *buf, size_t size){
         
         while(size > 0){
             // Get number of bytes that can be written.
-            wrcount = fifo_wrcount(&TXFIFO);
+            wrcount = fifo_wrcount(&tx_fifo);
             if(wrcount > size){
                 wrcount = size;
             }
             
             if(wrcount != 0){
-                fifo_write(&TXFIFO, u8buf, wrcount);
+                fifo_write(&tx_fifo, u8buf, wrcount);
                 u8buf += wrcount;
                 size -= wrcount;
                 // Since TX is inactive and should be empty, the interrupt should occur immediately.
@@ -432,7 +432,7 @@ void uart_puts(char *s){
         ISR(UIO_RXISR_VECTOR){
             char chr;
             chr = UIO_RXBUF;
-            fifo_write(&RXFIFO, &chr, 1);
+            fifo_write(&rx_fifo, &chr, 1);
         }
     #endif
     
@@ -440,7 +440,7 @@ void uart_puts(char *s){
         // TX Interrupt Service Routine
         ISR(UIO_TXISR_VECTOR){
             char chr;
-            if(fifo_read(&TXFIFO, &chr, 1) == RES_OK){
+            if(fifo_read(&tx_fifo, &chr, 1) == RES_OK){
                     UIO_TXBUF = chr;
             }else{
                 UIO_IE &= ~UIO_TXIE; // disable tx interrupt
@@ -450,21 +450,21 @@ void uart_puts(char *s){
 #elif defined(__MSP430_HAS_5xx_USCI__)  || defined(__MSP430_HAS_6xx_EUSCI__)  // - - - - - - - - - -
     #if (UIO_RX_MODE == 1) || (UIO_TX_MODE == 1)
         // RX/TX Interrupt Service Routine
-        ISR(UIO_ISR_VECTOR){
+        ISR(UIO_ISR){
             char chr;
             
             #if (UIO_RX_MODE == 1)
             if(UIO_IFG & UIO_RXIFG){
                 // Data Recieved
                 chr = UIO_RXBUF;
-                fifo_write(&RXFIFO, &chr, 1);
+                fifo_write(&rx_fifo, &chr, 1);
             }
             #endif
             
             #if (UIO_TX_MODE == 1)
             if(UIO_IFG & UIO_TXIFG){
                 // Transmit Buffer Empty
-                if(fifo_read(&TXFIFO, &chr, 1) == RES_OK){
+                if(fifo_read(&tx_fifo, &chr, 1) == RES_OK){
                     UIO_TXBUF = chr;
                 }else{
                     UIO_IE &= ~UIO_TXIE; // disable tx interrupt

@@ -66,11 +66,12 @@ void fifo_init(FIFO_t *fifo, void *bufptr, size_t bufsize){
 //--------------------------------------------------------------------------------------------------
 RES_t fifo_write(FIFO_t *fifo, void *src, size_t size){
     size_t wrcount;
-    
+    wrcount = fifo_wrcount(fifo);
+    if(size > wrcount){
+        return(RES_FULL);
+    }
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-        if(size > fifo_wrcount(fifo)){
-            return(RES_FULL);
-        }
 
         if((wrcount = fifo->bufsize - fifo->wridx) <= size){
             // write operation will wrap around in fifo
@@ -149,12 +150,12 @@ void fifo_write_trample(FIFO_t *fifo, void *src, size_t size){
 //--------------------------------------------------------------------------------------------------
 RES_t fifo_read(FIFO_t *fifo, void *dst, size_t size){
     size_t rdcount;
+    rdcount = fifo_rdcount(fifo);
+    if(size > rdcount){
+        return(RES_PARAMERR);
+    }
     
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-        if(size > fifo_rdcount(fifo)){
-            return(RES_PARAMERR);
-        }
-        
         rdcount = fifo->bufsize - fifo->rdidx;
         if(rdcount <= size){
             // read operation will wrap around in fifo
@@ -218,15 +219,14 @@ size_t fifo_read_max(FIFO_t *fifo, void *dst, size_t max_size){
 RES_t fifo_peek(FIFO_t *fifo, void *dst, size_t size){
     size_t rdcount;
     size_t rdidx;
+    if(size > fifo_rdcount(fifo)){
+        return(RES_PARAMERR);
+    }
     
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-        if(size > fifo_rdcount(fifo)){
-            return(RES_PARAMERR);
-        }
-        
         rdidx = fifo->rdidx;
-        
-        if((rdcount = fifo->bufsize - rdidx) <= size){
+        rdcount = fifo->bufsize - rdidx;
+        if(rdcount <= size){
             // read operation will wrap around in fifo
             // read first half of fifo
             memcpy(dst,fifo->bufptr+rdidx,rdcount);

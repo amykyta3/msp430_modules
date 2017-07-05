@@ -62,13 +62,13 @@
 
     static __inline__ void __iSeiParam(const uint8_t *__s){
         __enable_interrupt();
-        __asm__ volatile ("" ::: "memory");
+        __memory_barrier();
         (void)__s;
     }
 
     static __inline__ void __iCliParam(const uint8_t *__s){
         __disable_interrupt();
-        __asm__ volatile ("" ::: "memory");
+        __memory_barrier();
         (void)__s;
     }
 
@@ -78,7 +78,7 @@
         }else{
             __disable_interrupt();
         }
-        __asm__ volatile ("" ::: "memory");
+        __memory_barrier();
     }
 #endif    /* !__DOXYGEN__ */
 
@@ -92,9 +92,13 @@
 **/
 #if defined(__DOXYGEN__)
     #define ATOMIC_BLOCK(type)
+#elif defined(__GNUC__)
+#define ATOMIC_BLOCK(type) for ( type, __ToDo = __iCliRetVal(); \
+                           __ToDo ; __ToDo = 0 )
 #else
-    #define ATOMIC_BLOCK(type) for ( type, __ToDo = __iCliRetVal(); \
-                               __ToDo ; __ToDo = 0 )
+#define ATOMIC_BLOCK2(type, restore) for ( type, __ToDo = __iCliRetVal(); \
+                           __ToDo ; __ToDo = 0, restore)
+#define ATOMIC_BLOCK(type) ATOMIC_BLOCK2(type, type##_RESTORE)
 #endif    /* __DOXYGEN__ */
 
 
@@ -108,9 +112,12 @@
 
 #if defined(__DOXYGEN__)
     #define ATOMIC_RESTORESTATE
-#else
+#elif defined(__GNUC__)
     #define ATOMIC_RESTORESTATE uint8_t sreg_save \
         __attribute__((__cleanup__(__iRestore))) = __get_SR_register()
+#else
+#define ATOMIC_RESTORESTATE uint8_t sreg_save = __get_SR_register()
+#define ATOMIC_RESTORESTATE_RESTORE    __iRestore(&sreg_save)
 #endif    /* __DOXYGEN__ */
 
 /** \def ATOMIC_FORCEON
@@ -124,9 +131,12 @@
 **/
 #if defined(__DOXYGEN__)
     #define ATOMIC_FORCEON
-#else
+#elif defined(__GNUC__)
     #define ATOMIC_FORCEON uint8_t sreg_save \
         __attribute__((__cleanup__(__iSeiParam))) = 0
+#else
+#define ATOMIC_FORCEON uint8_t sreg_save = 0
+#define ATOMIC_FORCEON_RESTORE __iSeiRetVal()
 #endif    /* __DOXYGEN__ */
 
 
@@ -142,9 +152,13 @@
 **/
 #if defined(__DOXYGEN__)
     #define NONATOMIC_BLOCK(type)
-#else
+#elif defined(__GNUC__)
     #define NONATOMIC_BLOCK(type) for ( type, __ToDo = __iSeiRetVal(); \
                                   __ToDo ;  __ToDo = 0 )
+#else
+#define NONATOMIC_BLOCK2(type, restore) for ( type, __ToDo = __iSeiRetVal(); \
+                              __ToDo ;  __ToDo = 0, restore )
+#define NONATOMIC_BLOCK(type) NONATOMIC_BLOCK2(type, type##_RESTORE)
 #endif    /* __DOXYGEN__ */
 
 /** \def NONATOMIC_RESTORESTATE
@@ -156,9 +170,12 @@
 **/
 #if defined(__DOXYGEN__)
     #define NONATOMIC_RESTORESTATE
-#else
+#elif defined(__GNUC__)
     #define NONATOMIC_RESTORESTATE uint8_t sreg_save \
         __attribute__((__cleanup__(__iRestore))) = __get_SR_register()
+#else
+#define NONATOMIC_RESTORESTATE uint8_t sreg_save = __get_SR_register()
+#define NONATOMIC_RESTORESTATE_RESTORE __iRestore(&sreg_save)
 #endif    /* __DOXYGEN__ */
 
 /** \def NONATOMIC_FORCEOFF
@@ -172,9 +189,12 @@
 **/
 #if defined(__DOXYGEN__)
     #define NONATOMIC_FORCEOFF
-#else
+#elif defined(__GNUC__)
     #define NONATOMIC_FORCEOFF uint8_t sreg_save \
         __attribute__((__cleanup__(__iCliParam))) = 0
+#else
+#define NONATOMIC_FORCEOFF uint8_t sreg_save = 0
+#define NONATOMIC_FORCEOFF_RESTORE __iCliRetVal()
 #endif    /* __DOXYGEN__ */
 
 #endif
