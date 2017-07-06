@@ -74,7 +74,9 @@
     static char txbuf[UIO_TXBUF_SIZE];
     static FIFO_t tx_fifo;
 #elif(UIO_TX_MODE == 2) // DMA Mode
-    #error DMA TX mode not supported yet.
+    char txbuf[UIO_TXBUF_SIZE];
+    FIFO_t tx_fifo;
+    unsigned tx_dma_count;
 #endif
 
 #ifndef UIO_SLEEP_IRQ
@@ -134,7 +136,17 @@ void uart_init(void){
         rx_rdidx = 0;
         RX_DMA_CTL = DMADT_4 | DMADSTINCR_3 | DMASRCINCR_0 | DMASRCBYTE | DMADSTBYTE | DMAEN | DMAIE;
     #endif
-    
+    #if(UIO_TX_MODE == 2) // DMA Mode
+        fifo_init(&tx_fifo, txbuf, UIO_TXBUF_SIZE);
+        TX_DMA_CTL = 0;
+        TX_DMA_TRG &= ~TX_DMA_TSEL_MASK;
+        TX_DMA_TRG |= TX_DMA_TSEL;
+        TX_DMA_DA = (uio_dma_addr)&UIO_TXBUF;
+        TX_DMA_SA = (uio_dma_addr)txbuf;
+        TX_DMA_SZ = sizeof(txbuf);
+        tx_dma_count = 0;
+        TX_DMA_CTL = DMADT_0 | DMADSTINCR_0 | DMASRCINCR_3 | DMASRCBYTE | DMADSTBYTE | DMALEVEL;
+    #endif
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -154,7 +166,10 @@ void uart_uninit(void){
         RX_DMA_TRG &= ~RX_DMA_TSEL_MASK;
     #endif
     
-    
+    #if(UIO_TX_MODE == 2) // DMA Mode
+        TX_DMA_CTL = 0;
+        TX_DMA_TRG &= ~TX_DMA_TSEL_MASK;
+    #endif
 }
 
 //==================================================================================================
@@ -185,7 +200,11 @@ void uart_read(void *buf, size_t size){
             if(rdcount > size){
                 rdcount = size;
             }
-            
+            else if (rdcount == 0){
+                UIO_AWAIT_CHARS(size);
+                continue;
+            }
+
             if(rdcount != 0){
                 if(u8buf){
                     fifo_read(&rx_fifo, u8buf, rdcount);
@@ -409,8 +428,7 @@ void uart_write(const void *buf, size_t size){
                 fifo_write(&tx_fifo, u8buf, wrcount);
                 u8buf += wrcount;
                 size -= wrcount;
-                // Since TX is inactive and should be empty, the interrupt should occur immediately.
-                UIO_IE |= UIO_TXIE;
+                uart_tx_resume();
             }
             else
                 UIO_SLEEP_IRQ();
@@ -431,7 +449,12 @@ void uart_tx_resume(void){
 #if (UIO_TX_MODE <= 1) // Interrupt Mode
     UIO_IE |= UIO_TXIE;
 #elif (UIO_TX_MODE == 2) // DMA Mode
-
+    if ( (TX_DMA_CTL & DMAEN) == 0) {
+        tx_dma_count = fifo_rdbuf_count(&tx_fifo);
+        TX_DMA_SA = (uio_dma_addr)(&(txbuf[tx_fifo.rdidx]));
+        TX_DMA_SZ = tx_dma_count;
+        TX_DMA_CTL |= DMAEN | DMAIE;
+    }
 #endif
 }
 
@@ -492,6 +515,24 @@ bool  uart_tx_busy(void){
         RX_DMA_CTL &= ~DMAIFG;
     }
 #endif
+
+#if(UIO_TX_MODE == 2) // DMA Mode
+    bool uart_tx_dma_isr(void){
+        // clear the flag
+        TX_DMA_CTL &= ~DMAIFG;
+        fifo_read(&tx_fifo, NULL, tx_dma_count);
+        tx_dma_count = 0;
+        size_t have = fifo_rdbuf_count(&tx_fifo);
+        if (have > 0){
+            uart_tx_resume();
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
+#endif
+
 //--------------------------------------------------------------------------------------------------
 
 ///\cond INTERNAL

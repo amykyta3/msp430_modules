@@ -401,6 +401,9 @@
     #if(UIO_RX_MODE == 2) && (UIO_RX_DMA_CHANNEL > 2)
         #error The selected UIO_RX_DMA_CHANNEL is invalid
     #endif
+    #if(UIO_TX_MODE == 2) && (UIO_TX_DMA_CHANNEL > 2)
+        #error The selected UIO_TX_DMA_CHANNEL is invalid
+    #endif
 #elif defined(__MSP430_HAS_DMAX_6__)
     #if(UIO_RX_MODE == 2) && (UIO_RX_DMA_CHANNEL > 5)
         #error The selected UIO_RX_DMA_CHANNEL is invalid
@@ -417,6 +420,11 @@
 #define RX_DMA_DA       TPASTE3(DMA, UIO_RX_DMA_CHANNEL, DA)
 #define RX_DMA_SZ       TPASTE3(DMA, UIO_RX_DMA_CHANNEL, SZ)
 
+#define TX_DMA_CTL      TPASTE3(DMA, UIO_TX_DMA_CHANNEL, CTL)
+#define TX_DMA_SA       TPASTE3(DMA, UIO_TX_DMA_CHANNEL, SA)
+#define TX_DMA_DA       TPASTE3(DMA, UIO_TX_DMA_CHANNEL, DA)
+#define TX_DMA_SZ       TPASTE3(DMA, UIO_TX_DMA_CHANNEL, SZ)
+
 #if defined (__TI_COMPILER_VERSION__)
 typedef __SFR_FARPTR uio_dma_addr;
 #else
@@ -428,16 +436,24 @@ typedef uintptr_t    uio_dma_addr;
     #define RX_DMA_TRG          DMACTL0
     #define RX_DMA_TSEL_MASK    0x000F
 #elif defined(__MSP430_HAS_DMA_3__) || defined(__MSP430_HAS_DMAX_3__)    
+# if defined(DMA0TSEL_16)
+#   define __UIO_HAS_SEL32__
+# else
     #define RX_DMA_TRG          DMACTL0
+    #define TX_DMA_TRG          DMACTL0
     
-    #if(UIO_RX_DMA_CHANNEL == 0)
-        #define RX_DMA_TSEL_MASK    0x000F
-    #elif(UIO_RX_DMA_CHANNEL == 1)
-        #define RX_DMA_TSEL_MASK    0x00F0
-    #elif(UIO_RX_DMA_CHANNEL == 2)
-        #define RX_DMA_TSEL_MASK    0x0F00
+    #if(UIO_RX_DMA_CHANNEL < 2)
+        #define RX_DMA_TSEL_MASK    (0x000F << (4*UIO_RX_DMA_CHANNEL))
     #endif
+    #if(UIO_TX_DMA_CHANNEL < 2)
+        #define TX_DMA_TSEL_MASK    (0x000F << (4*UIO_TX_DMA_CHANNEL))
+    #endif
+# endif
 #elif defined(__MSP430_HAS_DMAX_6__)
+#define __UIO_HAS_SEL32__
+#endif
+
+#ifdef __UIO_HAS_SEL32__
     #if(UIO_RX_DMA_CHANNEL == 0)
         #define RX_DMA_TRG          DMACTL0
         #define RX_DMA_TSEL_MASK    0x001F
@@ -462,6 +478,32 @@ typedef uintptr_t    uio_dma_addr;
     #elif(UIO_RX_DMA_CHANNEL == 6)
         #define RX_DMA_TRG          DMACTL3
         #define RX_DMA_TSEL_MASK    0x1F00
+    #endif
+
+    #if(UIO_TX_DMA_CHANNEL == 0)
+        #define TX_DMA_TRG          DMACTL0
+        #define TX_DMA_TSEL_MASK    0x001F
+    #elif(UIO_TX_DMA_CHANNEL == 1)
+        #define TX_DMA_TRG          DMACTL0
+        #define TX_DMA_TSEL_MASK    0x1F00
+    #elif(UIO_TX_DMA_CHANNEL == 2)
+        #define TX_DMA_TRG          DMACTL1
+        #define TX_DMA_TSEL_MASK    0x001F
+    #elif(UIO_TX_DMA_CHANNEL == 3)
+        #define TX_DMA_TRG          DMACTL1
+        #define TX_DMA_TSEL_MASK    0x1F00
+    #elif(UIO_TX_DMA_CHANNEL == 4)
+        #define TX_DMA_TRG          DMACTL2
+        #define TX_DMA_TSEL_MASK    0x001F
+    #elif(UIO_TX_DMA_CHANNEL == 5)
+        #define TX_DMA_TRG          DMACTL2
+        #define TX_DMA_TSEL_MASK    0x1F00
+    #elif(UIO_TX_DMA_CHANNEL == 6)
+        #define TX_DMA_TRG          DMACTL3
+        #define TX_DMA_TSEL_MASK    0x001F
+    #elif(UIO_TX_DMA_CHANNEL == 6)
+        #define TX_DMA_TRG          DMACTL3
+        #define TX_DMA_TSEL_MASK    0x1F00
     #endif
 #endif
 

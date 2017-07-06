@@ -178,6 +178,36 @@ void uart_puts(char *s);
     
 #endif
 
+#if (UIO_TX_MODE == 2) || defined(__DOXYGEN__) // DMA Mode
+
+    /**
+    * \brief UART RX DMA Interrupt Service Routine
+    * \details If the UART RX mode is set to use DMA, the user must implement the DMA controller's
+    * ISR function. The ISR must call this function if the interrupt is for the RX DMA channel.
+    * This can be done using the is_uart_rx_dma_isr() function as follows:
+    * \code
+    *   if(is_uart_rx_dma_isr()){
+    *       uart_rx_dma_isr();
+    *   }
+    * \endcode
+    * \return - true if tx fifo empty
+    **/
+    bool uart_tx_dma_isr(void);
+
+    /**
+    * \brief Test to check if the current DMA ISR is for the uart_rx DMA
+    * \retval true  Interrupt flag corresponding to the UART RX DMA channel.
+    * \retval false RX DMA interrupt flag is not set.
+    **/
+    #include <msp430_xc.h>
+    #include "uart_io_internal.h"
+    static __inline__
+    bool is_uart_tx_dma_isr(void){
+        return(TX_DMA_CTL & DMAIFG);
+    };
+
+#endif
+
 
 #ifdef __cplusplus
 }
