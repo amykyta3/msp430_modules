@@ -268,6 +268,20 @@ size_t fifo_rdcount(FIFO_t *fifo){
     }
 }
 
+size_t fifo_rdbuf_count(FIFO_t *fifo){ // Returns len of buffer stored in fifo
+    size_t wridx,rdidx;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+        wridx = fifo->wridx;
+        rdidx = fifo->rdidx;
+    }
+
+    if(wridx >= rdidx){
+        return(wridx-rdidx);
+    }else{
+        return(fifo->bufsize-rdidx);
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 size_t fifo_wrcount(FIFO_t *fifo){
     size_t wridx,rdidx;

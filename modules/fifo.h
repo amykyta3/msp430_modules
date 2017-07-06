@@ -140,6 +140,13 @@ void fifo_clear(FIFO_t *fifo);
 size_t fifo_rdcount(FIFO_t *fifo); // Returns the number of bytes currently stored in the FIFO
 
 /**
+* \brief Get the bytes size available for read continous buffer in the FIFO
+* \param [in] fifo Pointer to the #FIFO_t object
+* \return Number of bytes
+**/
+size_t fifo_rdbuf_count(FIFO_t *fifo); // Returns len of buffer stored in fifo
+
+/**
 * \brief Get the number of bytes that can be written to the FIFO
 * \param [in] fifo Pointer to the #FIFO_t object
 * \return Number of bytes
