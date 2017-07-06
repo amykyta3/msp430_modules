@@ -86,7 +86,7 @@ void fifo_init(FIFO_t *fifo, void *bufptr, size_t bufsize);
 * \retval RES_OK 
 * \retval RES_FULL Not enough space in FIFO for requested write operation
 **/
-RES_t fifo_write(FIFO_t *fifo, void *src, size_t size);
+RES_t fifo_write(FIFO_t *fifo, const void *src, size_t size);
 
 /**
 * \brief Write data into the FIFO buffer. Tramples over oldest unread data if necessary.
@@ -94,7 +94,7 @@ RES_t fifo_write(FIFO_t *fifo, void *src, size_t size);
 * \param [in] src Pointer to the data to be stored
 * \param [in] size Number of bytes to be written to the FIFO
 **/
-void fifo_write_trample(FIFO_t *fifo, void *src, size_t size);
+void fifo_write_trample(FIFO_t *fifo, const void *src, size_t size);
 
 /**
 * \brief Read data from the FIFO buffer

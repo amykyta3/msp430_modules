@@ -65,6 +65,7 @@
         #define UIO_ME      U0ME
         #define UIO_IE      U0IE
         #define UIO_IFG     U0IFG
+        #define UIO_STAT    U0STAT
         
         // Flags
         #define UIO_RXEN    URXE0
@@ -73,6 +74,7 @@
         #define UIO_TXIE    UTXIE0
         #define UIO_RXIFG   URXIFG0
         #define UIO_TXIFG   UTXIFG0
+        #define UIO_BUSY    UCBUSY
         
         // ISR
         #define UIO_TXISR_VECTOR    USART0TX_VECTOR
@@ -91,6 +93,7 @@
         #define UIO_RXBUF       UCA0RXBUF
         #define UIO_TXBUF       UCA0TXBUF
         #define UIO_IFG         UCA0IFG
+        #define UIO_STAT        UCA0STAT
         #define UIO_IV          UCA0IV
         #define UIO_IE          UCA0IE
         
@@ -99,6 +102,7 @@
         #define UIO_RXIE        UCRXIE
         #define UIO_TXIFG       UCTXIFG
         #define UIO_RXIFG       UCRXIFG
+        #define UIO_BUSY        UCBUSY
         
         // ISR
         #define UIO_ISR_VECTOR  USCI_A0_VECTOR
@@ -116,6 +120,7 @@
         #define UIO_RXBUF       UCA0RXBUF
         #define UIO_TXBUF       UCA0TXBUF
         #define UIO_IFG         UCA0IFG
+        #define UIO_STAT        UCA0STAT
         #define UIO_IV          UCA0IV
         #define UIO_IE          UCA0IE
         
@@ -124,6 +129,7 @@
         #define UIO_RXIE        UCRXIE
         #define UIO_TXIFG       UCTXIFG
         #define UIO_RXIFG       UCRXIFG
+        #define UIO_BUSY        UCBUSY
         
         // ISR
         #define UIO_ISR_VECTOR  USCI_A0_VECTOR

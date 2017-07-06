@@ -64,7 +64,7 @@ void fifo_init(FIFO_t *fifo, void *bufptr, size_t bufsize){
 }
 
 //--------------------------------------------------------------------------------------------------
-RES_t fifo_write(FIFO_t *fifo, void *src, size_t size){
+RES_t fifo_write(FIFO_t *fifo, const void *src, size_t size){
     size_t wrcount;
     wrcount = fifo_wrcount(fifo);
     if(size > wrcount){
@@ -101,7 +101,7 @@ RES_t fifo_write(FIFO_t *fifo, void *src, size_t size){
 }
 
 //--------------------------------------------------------------------------------------------------
-void fifo_write_trample(FIFO_t *fifo, void *src, size_t size){
+void fifo_write_trample(FIFO_t *fifo, const void *src, size_t size){
     
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
         if(size >= fifo->bufsize-1){

@@ -364,10 +364,10 @@ char *uart_gets_s(char *str, size_t n){
 //==================================================================================================
 // TX Functions
 //==================================================================================================
-void uart_write(void *buf, size_t size){
+void uart_write(const void *buf, size_t size){
     #if (UIO_TX_MODE == 1) // Interrupt Mode
         size_t wrcount;
-        uint8_t* u8buf = (uint8_t*)buf;
+        const uint8_t* u8buf = (const uint8_t*)buf;
         
         while(size > 0){
             // Get number of bytes that can be written.
@@ -405,15 +405,45 @@ void uart_puts(char *s){
     uart_write(s, strlen(s));
 }
 
+int uart_send(const void *buf, size_t size){
+#if (UIO_TX_MODE == 0) // polling Mode
+    uart_write(buf, size);
+    return size;
+#else
+    size_t wrcount = fifo_wrcount(&tx_fifo);
+    if(wrcount > size){
+        wrcount = size;
+    }
+
+    if(wrcount > 0){
+        const uint8_t* u8buf = (const uint8_t*)buf;
+        fifo_write(&tx_fifo, u8buf, wrcount);
+        // Since TX is inactive and should be empty, the interrupt should occur immediately.
+        UIO_IE |= UIO_TXIE;
+        return wrcount;
+    }
+    return 0;
+#endif
+}
+
+bool  uart_tx_busy(void){
+#if (UIO_TX_MODE == 0) // polling Mode
+#else
+    size_t wrcount = fifo_rdcount(&tx_fifo);
+    if (wrcount > 0)
+        return true;
+#endif
+    if ((UIO_IFG & UIO_TXIFG) == 0)
+        return true;
+    while ((UIO_STAT & UIO_BUSY) != 0);
+    return false;
+}
+
 //==================================================================================================
 // ISRs
 //==================================================================================================
 
 #if(UIO_RX_MODE == 2) // DMA Mode
-    bool is_uart_rx_dma_isr(void){
-        return(RX_DMA_CTL & DMAIFG);
-    }
-    
     void uart_rx_dma_isr(void){
         // RX DMA has wrapped around rxbuf
         rx_laplead++;

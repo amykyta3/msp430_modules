@@ -88,13 +88,23 @@ void uart_read(void *buf, size_t size);
 * \param [in] buf Pointer to the data to be written.
 * \param [in] size Number of bytes to be written.
 **/
-void uart_write(void *buf, size_t size);
+void uart_write(const void *buf, size_t size);
+
+/**
+* \brief nonblocking Write data to the UART. send only awailiable FIFO space bytes.
+* \param [in] buf Pointer to the data to be written.
+* \param [in] size Number of bytes to be written.
+* \return     size of sended data
+**/
+int uart_send(const void *buf, size_t size);
 
 /**
 * \brief Get the number of bytes available to be read
 * \return Number of bytes
 **/
 size_t uart_rdcount(void);
+
+bool  uart_tx_busy(void);
 
 /**
 * \brief Discard any data that has already been received
@@ -159,7 +169,12 @@ void uart_puts(char *s);
     * \retval true  Interrupt flag corresponding to the UART RX DMA channel.
     * \retval false RX DMA interrupt flag is not set.
     **/
-    bool is_uart_rx_dma_isr(void);
+    #include <msp430_xc.h>
+    #include "uart_io_internal.h"
+    static __inline__
+    bool is_uart_rx_dma_isr(void){
+        return(RX_DMA_CTL & DMAIFG);
+    };
     
 #endif
 
