@@ -62,21 +62,21 @@
 #endif
 
 #if(UIO_RX_MODE == 1) // Interrupt Mode
-    static char rxbuf[UIO_RXBUF_SIZE];
-    static FIFO_t rx_fifo;
+    static char uio_rxbuf[UIO_RXBUF_SIZE];
+    static FIFO_t uio_rxfifo;
 #elif(UIO_RX_MODE == 2) // DMA Mode
-    static char rxbuf[UIO_RXBUF_SIZE];
+    static char uio_rxbuf[UIO_RXBUF_SIZE];
     static volatile int8_t rx_laplead;
     static uint16_t rx_rdidx;
 #endif
 
 #if(UIO_TX_MODE == 1) // Interrupt Mode
-    static char txbuf[UIO_TXBUF_SIZE];
-    static FIFO_t tx_fifo;
+    static char uio_txbuf[UIO_TXBUF_SIZE];
+    static FIFO_t uio_txfifo;
 #elif(UIO_TX_MODE == 2) // DMA Mode
-    char txbuf[UIO_TXBUF_SIZE];
-    FIFO_t tx_fifo;
-    unsigned tx_dma_count;
+    static char uio_txbuf[UIO_TXBUF_SIZE];
+    static FIFO_t uio_txfifo;
+    static unsigned uio_tx_dma_count;
 #endif
 
 #ifndef UIO_SLEEP_IRQ
@@ -98,12 +98,12 @@ void uart_init(void){
         UIO_CTL  &= ~SWRST;
         
         #if(UIO_RX_MODE == 1) // Interrupt Mode
-            fifo_init(&rx_fifo, rxbuf, UIO_RXBUF_SIZE);
+            fifo_init(&uio_rxfifo, uio_rxbuf, UIO_RXBUF_SIZE);
             UIO_IE |= UIO_RXIE;
         #endif
         
         #if(UIO_TX_MODE == 1) // Interrupt Mode
-            fifo_init(&tx_fifo, txbuf, UIO_TXBUF_SIZE);
+            fifo_init(&uio_txfifo, uio_txbuf, UIO_TXBUF_SIZE);
         #endif
         
     #elif defined(__MSP430_HAS_2xx_USCI__) || defined(__MSP430_HAS_5xx_USCI__) || defined(__MSP430_HAS_6xx_EUSCI__)
@@ -116,12 +116,12 @@ void uart_init(void){
         UIO_CTL1 &= ~UCSWRST;
         
         #if(UIO_RX_MODE == 1) // Interrupt Mode
-            fifo_init(&rx_fifo, rxbuf, UIO_RXBUF_SIZE);
+            fifo_init(&uio_rxfifo, uio_rxbuf, UIO_RXBUF_SIZE);
             UIO_IE |= UIO_RXIE;
         #endif
         
         #if(UIO_TX_MODE == 1) // Interrupt Mode
-            fifo_init(&tx_fifo, txbuf, UIO_TXBUF_SIZE);
+            fifo_init(&uio_txfifo, uio_txbuf, UIO_TXBUF_SIZE);
         #endif   
     #endif
     
@@ -130,21 +130,21 @@ void uart_init(void){
         RX_DMA_TRG &= ~RX_DMA_TSEL_MASK;
         RX_DMA_TRG |= RX_DMA_TSEL;
         RX_DMA_SA = (uio_dma_addr)&UIO_RXBUF;
-        RX_DMA_DA = (uio_dma_addr)rxbuf;
-        RX_DMA_SZ = sizeof(rxbuf);
+        RX_DMA_DA = (uio_dma_addr)uio_rxbuf;
+        RX_DMA_SZ = sizeof(uio_rxbuf);
         rx_laplead = 0;
         rx_rdidx = 0;
         RX_DMA_CTL = DMADT_4 | DMADSTINCR_3 | DMASRCINCR_0 | DMASRCBYTE | DMADSTBYTE | DMAEN | DMAIE;
     #endif
     #if(UIO_TX_MODE == 2) // DMA Mode
-        fifo_init(&tx_fifo, txbuf, UIO_TXBUF_SIZE);
+        fifo_init(&uio_txfifo, uio_txbuf, UIO_TXBUF_SIZE);
         TX_DMA_CTL = 0;
         TX_DMA_TRG &= ~TX_DMA_TSEL_MASK;
         TX_DMA_TRG |= TX_DMA_TSEL;
         TX_DMA_DA = (uio_dma_addr)&UIO_TXBUF;
-        TX_DMA_SA = (uio_dma_addr)txbuf;
-        TX_DMA_SZ = sizeof(txbuf);
-        tx_dma_count = 0;
+        TX_DMA_SA = (uio_dma_addr)uio_txbuf;
+        TX_DMA_SZ = sizeof(uio_txbuf);
+        uio_tx_dma_count = 0;
         TX_DMA_CTL = DMADT_0 | DMADSTINCR_0 | DMASRCINCR_3 | DMASRCBYTE | DMADSTBYTE | DMALEVEL;
     #endif
 }
@@ -196,7 +196,7 @@ void uart_read(void *buf, size_t size){
         
         while(size > 0){
             // Get number of bytes that can be read.
-            rdcount = fifo_rdcount(&rx_fifo);
+            rdcount = fifo_rdcount(&uio_rxfifo);
             if(rdcount > size){
                 rdcount = size;
             }
@@ -207,10 +207,10 @@ void uart_read(void *buf, size_t size){
 
             if(rdcount != 0){
                 if(u8buf){
-                    fifo_read(&rx_fifo, u8buf, rdcount);
+                    fifo_read(&uio_rxfifo, u8buf, rdcount);
                     u8buf += rdcount;
                 }else{
-                    fifo_read(&rx_fifo, NULL, rdcount);
+                    fifo_read(&uio_rxfifo, NULL, rdcount);
                 }
                 size -= rdcount;
             }
@@ -230,7 +230,7 @@ void uart_read(void *buf, size_t size){
                 laplead = rx_laplead; //read lap
                 wridx = RX_DMA_SZ; //read size
             }while(laplead != rx_laplead); //if laplead changed, may be invalid. try again
-            wridx = sizeof(rxbuf) - wridx;
+            wridx = sizeof(uio_rxbuf) - wridx;
             
             if((laplead == 0) && (wridx >= rx_rdidx)){
                 // Data doesn't wrap
@@ -244,7 +244,7 @@ void uart_read(void *buf, size_t size){
                 }
                 
                 // copy rdcount into u8buf
-                memcpy(u8buf, &rxbuf[rx_rdidx], rdcount);
+                memcpy(u8buf, &uio_rxbuf[rx_rdidx], rdcount);
                 
                 u8buf += rdcount;
                 size -= rdcount;
@@ -254,7 +254,7 @@ void uart_read(void *buf, size_t size){
                 // Available data wraps.
                 
                 // number of bytes to the end of the buffer
-                rdcount = sizeof(rxbuf) - rx_rdidx;
+                rdcount = sizeof(uio_rxbuf) - rx_rdidx;
                 if(rdcount > size){
                     rdcount = size;
                 }
@@ -264,13 +264,13 @@ void uart_read(void *buf, size_t size){
                 }
                 
                 // copy rdcount into u8buf
-                memcpy(u8buf, &rxbuf[rx_rdidx], rdcount);
+                memcpy(u8buf, &uio_rxbuf[rx_rdidx], rdcount);
                 
                 u8buf += rdcount;
                 size -= rdcount;
                 rx_rdidx += rdcount;
                 
-                if(rx_rdidx == sizeof(rxbuf)){
+                if(rx_rdidx == sizeof(uio_rxbuf)){
                     // read to the end. Wrap back
                     rx_rdidx = 0;
                     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
@@ -309,7 +309,7 @@ void uart_read(void *buf, size_t size){
 //--------------------------------------------------------------------------------------------------
 size_t uart_rdcount(void){
     #if (UIO_RX_MODE == 1) // Interrupt Mode
-        return(fifo_rdcount(&rx_fifo));
+        return(fifo_rdcount(&uio_rxfifo));
     #elif (UIO_RX_MODE == 2) // DMA Mode
         int8_t laplead;
         uint16_t wridx;
@@ -319,7 +319,7 @@ size_t uart_rdcount(void){
             laplead = rx_laplead; //read lap
             wridx = RX_DMA_SZ; //read size
         }while(laplead != rx_laplead); //if laplead changed, may be invalid. try again
-        wridx = sizeof(rxbuf) - wridx;
+        wridx = sizeof(uio_rxbuf) - wridx;
         
         if((laplead == 0) && (wridx >= rx_rdidx)){
             // Data doesn't wrap
@@ -327,7 +327,7 @@ size_t uart_rdcount(void){
             
         }else if(((laplead == 1) && (wridx <= rx_rdidx)) || ((laplead == 0) && (wridx < rx_rdidx))){
             // Available data wraps.
-            return(wridx + sizeof(rxbuf) - rx_rdidx);
+            return(wridx + sizeof(uio_rxbuf) - rx_rdidx);
         }else{
             // Overrun!
             
@@ -351,11 +351,11 @@ size_t uart_rdcount(void){
 //--------------------------------------------------------------------------------------------------
 void uart_rdflush(void){
     #if (UIO_RX_MODE == 1) // Interrupt Mode
-        fifo_clear(&rx_fifo);
+        fifo_clear(&uio_rxfifo);
     #elif (UIO_RX_MODE == 2) // DMA Mode
         uint16_t wridx;
         
-        wridx = sizeof(rxbuf);
+        wridx = sizeof(uio_rxbuf);
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
             wridx -= RX_DMA_SZ;
         }
@@ -374,7 +374,7 @@ void uart_rdflush(void){
 //--------------------------------------------------------------------------------------------------
 char uart_getc(void){
     int c;
-    for (c = fifo_pop_byte(&rx_fifo); c < 0; c = fifo_pop_byte(&rx_fifo))
+    for (c = fifo_pop_byte(&uio_rxfifo); c < 0; c = fifo_pop_byte(&uio_rxfifo))
         UIO_AWAIT_CHARS(1);
     return((char)(uint8_t)c);
 }
@@ -386,7 +386,7 @@ char uart_getc(void){
 * \return < 0  input empty, no chars availiable
 **/
 int uart_getchar(void){
-    return fifo_pop_byte(&rx_fifo);
+    return fifo_pop_byte(&uio_rxfifo);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -430,13 +430,13 @@ void uart_write(const void *buf, size_t size){
         
         while(size > 0){
             // Get number of bytes that can be written.
-            wrcount = fifo_wrcount(&tx_fifo);
+            wrcount = fifo_wrcount(&uio_txfifo);
             if(wrcount > size){
                 wrcount = size;
             }
             
             if(wrcount != 0){
-                fifo_write(&tx_fifo, u8buf, wrcount);
+                fifo_write(&uio_txfifo, u8buf, wrcount);
                 u8buf += wrcount;
                 size -= wrcount;
                 uart_tx_resume();
@@ -461,9 +461,9 @@ void uart_tx_resume(void){
     UIO_IE |= UIO_TXIE;
 #elif (UIO_TX_MODE == 2) // DMA Mode
     if ( (TX_DMA_CTL & DMAEN) == 0) {
-        tx_dma_count = fifo_rdbuf_count(&tx_fifo);
-        TX_DMA_SA = (uio_dma_addr)(&(txbuf[tx_fifo.rdidx]));
-        TX_DMA_SZ = tx_dma_count;
+        uio_tx_dma_count = fifo_rdbuf_count(&uio_txfifo);
+        TX_DMA_SA = (uio_dma_addr)(&(uio_txbuf[uio_txfifo.rdidx]));
+        TX_DMA_SZ = uio_tx_dma_count;
         TX_DMA_CTL |= DMAEN | DMAIE;
     }
 #endif
@@ -484,14 +484,14 @@ int uart_send(const void *buf, size_t size){
     uart_write(buf, size);
     return size;
 #else
-    size_t wrcount = fifo_wrcount(&tx_fifo);
+    size_t wrcount = fifo_wrcount(&uio_txfifo);
     if(wrcount > size){
         wrcount = size;
     }
 
     if(wrcount > 0){
         const uint8_t* u8buf = (const uint8_t*)buf;
-        fifo_write(&tx_fifo, u8buf, wrcount);
+        fifo_write(&uio_txfifo, u8buf, wrcount);
         // Since TX is inactive and should be empty, the interrupt should occur immediately.
         UIO_IE |= UIO_TXIE;
         return wrcount;
@@ -503,7 +503,7 @@ int uart_send(const void *buf, size_t size){
 bool  uart_tx_busy(void){
 #if (UIO_TX_MODE == 0) // polling Mode
 #else
-    size_t wrcount = fifo_rdcount(&tx_fifo);
+    size_t wrcount = fifo_rdcount(&uio_txfifo);
     if (wrcount > 0)
         return true;
 #endif
@@ -531,9 +531,9 @@ bool  uart_tx_busy(void){
     bool uart_tx_dma_isr(void){
         // clear the flag
         TX_DMA_CTL &= ~DMAIFG;
-        fifo_read(&tx_fifo, NULL, tx_dma_count);
-        tx_dma_count = 0;
-        size_t have = fifo_rdbuf_count(&tx_fifo);
+        fifo_read(&uio_txfifo, NULL, uio_tx_dma_count);
+        uio_tx_dma_count = 0;
+        size_t have = fifo_rdbuf_count(&uio_txfifo);
         if (have > 0){
             uart_tx_resume();
             return false;
@@ -554,7 +554,7 @@ bool  uart_tx_busy(void){
         ISR(UIO_RXISR_VECTOR){
             char chr;
             chr = UIO_RXBUF;
-            fifo_write(&rx_fifo, &chr, 1);
+            fifo_write(&uio_rxfifo, &chr, 1);
         }
     #endif
     
@@ -562,7 +562,7 @@ bool  uart_tx_busy(void){
         // TX Interrupt Service Routine
         ISR(UIO_TXISR_VECTOR){
             char chr;
-            if(fifo_read(&tx_fifo, &chr, 1) == RES_OK){
+            if(fifo_read(&uio_txfifo, &chr, 1) == RES_OK){
                     UIO_TXBUF = chr;
             }else{
                 UIO_IE &= ~UIO_TXIE; // disable tx interrupt
@@ -582,7 +582,7 @@ bool  uart_tx_busy(void){
                 // Data Recieved
                 #if (UIO_RX_MODE == 1)
                 chr = UIO_RXBUF;
-                fifo_push_byte(&rx_fifo, chr);
+                fifo_push_byte(&uio_rxfifo, chr);
                 #endif
                 #if (UIO_RX_SANITY_WAKE > 0)
                 if (uio_rx_await_chars > 0)
@@ -596,7 +596,7 @@ bool  uart_tx_busy(void){
             #if (UIO_TX_MODE == 1)
             if(UIO_IFG & UIO_TXIFG){
                 // Transmit Buffer Empty
-                if(fifo_read(&tx_fifo, &chr, 1) == RES_OK){
+                if(fifo_read(&uio_txfifo, &chr, 1) == RES_OK){
                     UIO_TXBUF = chr;
                 }else{
                     UIO_IE &= ~UIO_TXIE; // disable tx interrupt
