@@ -373,9 +373,20 @@ void uart_rdflush(void){
 
 //--------------------------------------------------------------------------------------------------
 char uart_getc(void){
-    char c;
-    uart_read(&c, 1);
-    return(c);
+    int c;
+    for (c = fifo_pop_byte(&rx_fifo); c < 0; c = fifo_pop_byte(&rx_fifo))
+        UIO_AWAIT_CHARS(1);
+    return((char)(uint8_t)c);
+}
+
+/**
+* \brief nonblocking Reads the next character from the UART
+* \details If a character is not immediately available, function return -1
+* \return >= 0 The next available character
+* \return < 0  input empty, no chars availiable
+**/
+int uart_getchar(void){
+    return fifo_pop_byte(&rx_fifo);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -571,7 +582,7 @@ bool  uart_tx_busy(void){
                 // Data Recieved
                 #if (UIO_RX_MODE == 1)
                 chr = UIO_RXBUF;
-                fifo_write(&rx_fifo, &chr, 1);
+                fifo_push_byte(&rx_fifo, chr);
                 #endif
                 #if (UIO_RX_SANITY_WAKE > 0)
                 if (uio_rx_await_chars > 0)

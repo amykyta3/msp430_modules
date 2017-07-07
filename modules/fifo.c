@@ -110,7 +110,7 @@ void fifo_write_trample(FIFO_t *fifo, const void *src, size_t size){
             
             fifo->wridx = fifo->bufsize-1;
             fifo->rdidx = 0;
-            memcpy(fifo->bufptr, src + (size-(fifo->bufsize-1)), fifo->bufsize-1);
+            memcpy(fifo->bufptr, (const uint8_t*)src + (size-(fifo->bufsize-1)), fifo->bufsize-1);
         }else{
             size_t wrcount;
             int overflow = 0;
@@ -127,7 +127,7 @@ void fifo_write_trample(FIFO_t *fifo, const void *src, size_t size){
                 //wrap around and continue
                 fifo->wridx = 0;
                 size -= wrcount;
-                src = (uint8_t*)src + wrcount;
+                src = (const uint8_t*)src + wrcount;
             }
 
             if(size > 0){
@@ -295,6 +295,43 @@ size_t fifo_wrcount(FIFO_t *fifo){
     }else{
         return((fifo->bufsize-wridx)+rdidx-1);
     }
+}
+
+/**
+* \brief Write data into the FIFO buffer
+* \param [in] fifo Pointer to the #FIFO_t object
+* \param [in] x data to be stored
+* \retval RES_OK
+* \retval RES_FULL Not enough space in FIFO for requested write operation
+**/
+RES_t fifo_push_byte(FIFO_t *fifo, uint8_t x){
+    size_t wrnext = fifo->wridx +1;
+    if (wrnext >= fifo->bufsize)
+        wrnext = 0;
+
+    if (wrnext == fifo->rdidx)
+        return(RES_FULL);
+
+    fifo->bufptr[fifo->wridx] = x;
+    fifo->wridx = wrnext;
+    return(RES_OK);
+}
+
+/**
+* \brief Read data byte from the FIFO buffer
+* \param [in] fifo Pointer to the #FIFO_t object
+* \retval >= 0 valid byte
+* \retval < 0  Not enough bytes written in FIFO for requested read operation
+**/
+int fifo_pop_byte(FIFO_t *fifo){
+    if (fifo->rdidx == fifo->wridx)
+        return -1;
+    size_t rdnext = fifo->rdidx +1;
+    if (rdnext >= fifo->bufsize)
+        rdnext = 0;
+    uint8_t x = fifo->bufptr[fifo->rdidx];
+    fifo->rdidx = rdnext;
+    return x;
 }
 
 ///\}

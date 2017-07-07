@@ -119,6 +119,14 @@ void uart_rdflush(void);
 char uart_getc(void);
 
 /**
+* \brief nonblocking Reads the next character from the UART
+* \details If a character is not immediately available, function return -1
+* \return >= 0 The next available character
+* \return < 0  input empty, no chars availiable
+**/
+int uart_getchar(void);
+
+/**
 * \brief Reads in a string of characters until a new-line character ( \c \\n) is received
 * 
 * - Reads at most n-1 characters from the UART
