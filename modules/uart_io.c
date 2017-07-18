@@ -374,8 +374,12 @@ void uart_rdflush(void){
 //--------------------------------------------------------------------------------------------------
 char uart_getc(void){
     int c;
+#if (UIO_RX_MODE == 0) // Polling Mode
+    uart_read(&c, 1);
+#else
     for (c = fifo_pop_byte(&uio_rxfifo); c < 0; c = fifo_pop_byte(&uio_rxfifo))
         UIO_AWAIT_CHARS(1);
+#endif
     return((char)(uint8_t)c);
 }
 
