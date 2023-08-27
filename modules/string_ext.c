@@ -369,7 +369,7 @@ uint8_t snprint_d16(char *buffer, size_t buf_size, uint16_t num){
 uint8_t snprint_d32(char *buffer, size_t buf_size, uint32_t num){
     uint8_t i, nchars;
     char str[10];
-    uint32_t bcd;
+    uint64_t bcd;
     
     i = 10; // max of 10 digits
     
